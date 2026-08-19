@@ -1,11 +1,13 @@
 import { spacingFrom, typeFrom } from '../metrics.js';
-import { clearFontMetricsCache, createGrid, readBaseline } from './baseline.js';
+import { classifyRole } from '../roles.js';
+import { clearTokenCache, colorTokenName } from '../tokens.js';
+import { baselineY, clearFontMetricsCache, createBaselineMarker, createGrid, gridOffset } from './baseline.js';
 import { createBoxes } from './boxes.js';
-import { describe } from './format.js';
+import { createGapLayer, measureGaps, type Side } from './gaps.js';
 import { measure } from './geometry.js';
 import { createHost } from './host.js';
 import { createHover, type HoverTarget } from './hover.js';
-import { createPanel } from './panel.js';
+import { createReadout } from './readout.js';
 
 export interface OverlayConfig {
   /** Baseline grid interval in px; 0 draws no grid. */
@@ -24,18 +26,23 @@ export interface Overlay {
 export function createOverlay(config: OverlayConfig): Overlay {
   const host = createHost();
   const grid = createGrid(host.shadow);
+  const gaps = createGapLayer(host.shadow);
   const boxes = createBoxes(host.shadow);
-  const panel = createPanel(host.shadow);
+  const marker = createBaselineMarker(host.shadow);
+  const readout = createReadout(host.shadow);
   let enabled = false;
 
-  function draw({ element, x, y }: HoverTarget): void {
+  function draw(target: HoverTarget): void {
     const originY = config.baseline > 0 ? config.root.getBoundingClientRect().top : 0;
     if (config.baseline > 0) grid.update(config.baseline, originY);
     else grid.hide();
 
+    const element = target.element;
     if (element === null) {
+      gaps.hide();
       boxes.hide();
-      panel.hide();
+      marker.hide();
+      readout.hide();
       return;
     }
 
@@ -43,17 +50,34 @@ export function createOverlay(config: OverlayConfig): Overlay {
     const style = getComputedStyle(element);
     const box = measure(element, style);
     const type = typeFrom(style);
+    const rootFontSize = Number.parseFloat(getComputedStyle(config.root).fontSize) || 16;
 
-    boxes.update(box);
-    panel.render({
-      label: describe(element),
-      border: box.border,
+    const bands = measureGaps(element, host.element);
+    const explained = new Set<Side>(bands.map((gap) => gap.side));
+    boxes.update(box, explained);
+    gaps.update(bands, rootFontSize);
+
+    const baseline = baselineY(element, box, style, type);
+    if (baseline === null) marker.hide();
+    else marker.update(box.content, baseline);
+
+    readout.update({
+      role: classifyRole(element, style, rootFontSize),
+      box: box.border,
+      bounds: {
+        top: Math.min(box.border.y, ...bands.map((gap) => gap.rect.y)),
+        bottom: Math.max(
+          box.border.y + box.border.height,
+          ...bands.map((gap) => gap.rect.y + gap.rect.height),
+        ),
+      },
       type,
       spacing: spacingFrom(style),
-      baseline: readBaseline(element, box, style, type, originY, config.baseline),
+      color: style.color,
+      colorToken: colorTokenName(style.color),
+      baseline: baseline === null ? null : gridOffset(baseline, originY, config.baseline),
+      rootFontSize,
     });
-    // Render first: placement needs the card's measured size.
-    panel.place(x, y);
   }
 
   const hover = createHover({ host: host.element, root: config.root, onFrame: draw });
@@ -71,6 +95,7 @@ export function createOverlay(config: OverlayConfig): Overlay {
     enable() {
       if (enabled) return;
       enabled = true;
+      clearTokenCache();
       host.mount();
       hover.start();
       document.fonts?.addEventListener('loadingdone', onFontsDone);
@@ -82,8 +107,10 @@ export function createOverlay(config: OverlayConfig): Overlay {
       hover.stop();
       document.fonts?.removeEventListener('loadingdone', onFontsDone);
       grid.hide();
+      gaps.hide();
       boxes.hide();
-      panel.hide();
+      marker.hide();
+      readout.hide();
       host.unmount();
     },
 

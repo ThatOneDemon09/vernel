@@ -24,6 +24,17 @@ export function shorthand(sides: BoxSides): string {
   return px(top);
 }
 
+/** px as rem against the root font size — how type scales are actually specced. */
+export function rem(value: number, rootFontSize: number): string {
+  if (rootFontSize === 0) return px(value, 2);
+  return `${num(value / rootFontSize, 3)}rem`;
+}
+
+/** Tracking, held internally in 1/1000 em, shown in the em designers type. */
+export function em(tracking: number): string {
+  return `${num(tracking / 1000, 3)}em`;
+}
+
 /** First family in a computed font stack, unquoted. */
 export function firstFamily(stack: string): string {
   const first = stack.split(',')[0]?.trim() ?? '';

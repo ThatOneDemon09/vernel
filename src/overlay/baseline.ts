@@ -1,5 +1,6 @@
+import { hasDirectText } from '../dom.js';
 import type { TypeMetrics } from '../metrics.js';
-import type { BoxModel } from './geometry.js';
+import type { BoxModel, Rect } from './geometry.js';
 import { div } from './host.js';
 
 export interface BaselineReading {
@@ -15,7 +16,7 @@ export interface Grid {
   hide(): void;
 }
 
-const LINE = 'rgba(236, 72, 153, 0.22)';
+const LINE = 'rgba(236, 72, 153, 0.18)';
 
 /**
  * One element with a repeating gradient rather than N rules: a 4000px page at
@@ -95,38 +96,50 @@ export function clearFontMetricsCache(): void {
 /**
  * A container whose first child is a block gets its first line — and therefore
  * its first baseline — from that child, in that child's font. Reporting the
- * container's own font metrics there would be a confidently wrong number, so
- * the reading is only offered for elements that own the line themselves.
+ * container's own font metrics there would be a confidently wrong number, so a
+ * baseline is only offered for elements that own the line themselves.
  */
-function ownsFirstLine(el: Element): boolean {
-  for (const node of el.childNodes) {
-    if (node.nodeType !== Node.TEXT_NODE) continue;
-    if (node.nodeValue !== null && node.nodeValue.trim() !== '') return true;
-  }
-  return false;
-}
-
-/** Viewport y of the first text baseline in the element's content box. */
-function firstBaselineY(box: BoxModel, cs: CSSStyleDeclaration, type: TypeMetrics): number {
+export function baselineY(
+  el: Element,
+  box: BoxModel,
+  cs: CSSStyleDeclaration,
+  type: TypeMetrics,
+): number | null {
+  if (!hasDirectText(el)) return null;
   const { ascent, descent } = verticalMetrics(cs, type);
   const lineHeight = type.lineHeight ?? ascent + descent;
   const halfLeading = (lineHeight - (ascent + descent)) / 2;
   return box.content.y + halfLeading + ascent;
 }
 
-/** How far the first baseline of `el` sits from the nearest grid line. */
-export function readBaseline(
-  el: Element,
-  box: BoxModel,
-  cs: CSSStyleDeclaration,
-  type: TypeMetrics,
-  originY: number,
-  interval: number,
-): BaselineReading | null {
-  if (!(interval > 0) || !ownsFirstLine(el)) return null;
-  const relative = firstBaselineY(box, cs, type) - originY;
+/** How far a baseline sits from the nearest line of the grid. */
+export function gridOffset(baseline: number, originY: number, interval: number): BaselineReading | null {
+  if (!(interval > 0)) return null;
+  const relative = baseline - originY;
   const modulo = ((relative % interval) + interval) % interval;
   const delta = modulo <= interval / 2 ? modulo : modulo - interval;
   // Sub-half-pixel is below what anyone can see or fix; call it on the grid.
   return { interval, delta, onGrid: Math.abs(delta) < 0.5 };
+}
+
+export interface BaselineMarker {
+  update(content: Rect, baseline: number): void;
+  hide(): void;
+}
+
+/** A dashed rule sitting exactly on the text's first baseline. */
+export function createBaselineMarker(shadow: ShadowRoot): BaselineMarker {
+  const el = div('baseline-mark');
+  shadow.append(el);
+
+  return {
+    update(content, baseline) {
+      el.style.transform = `translate(${content.x}px, ${baseline}px)`;
+      el.style.width = `${content.width}px`;
+      el.style.display = 'block';
+    },
+    hide() {
+      el.style.display = 'none';
+    },
+  };
 }
