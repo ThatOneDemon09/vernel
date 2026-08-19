@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>vernel demo</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        font-size: 16px;
+        --text-primary: #f4f4f5;
+        --text-secondary: #9b9ba3;
+        --surface-page: #0b0b0e;
+        --surface-card: #16161c;
+        --border-card: #2b2b34;
+        --accent: #e2603c;
+      }
+      :root[data-theme='light'] {
+        --text-primary: #191920;
+        --text-secondary: #5f5f6b;
+        --surface-page: #f5f1ea;
+        --surface-card: #fffdf9;
+        --border-card: #e3ddd2;
+        --accent: #b8431f;
+      }
+      body {
+        margin: 0;
+        padding: 64px 48px;
+        background: var(--surface-page);
+        color: var(--text-primary);
+        font-family: Geist, system-ui, sans-serif;
+      }
+      .eyebrow {
+        margin: 0 0 1.5rem;
+        font-size: 0.75rem;
+        line-height: 1.2;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+      }
+      h1 {
+        margin: 0 0 2rem;
+        font-size: 2.6rem;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+        font-weight: 600;
+      }
+      .lede {
+        margin: 0 0 1.25rem;
+        max-width: 44ch;
+        font-size: 1.75rem;
+        line-height: 1.4;
+        letter-spacing: -0.005em;
+      }
+      .narrative {
+        margin: 0 0 1.25rem;
+        max-width: 62ch;
+        font-size: 1rem;
+        line-height: 1.6;
+        color: var(--text-secondary);
+      }
+      .row {
+        display: flex;
+        flex-wrap: wrap;
+        column-gap: 20px;
+        row-gap: 12px;
+        margin: 2rem 0;
+      }
+      .card {
+        padding: 16px 20px;
+        border-radius: 8px;
+        background: var(--surface-card);
+        font-size: 0.875rem;
+        line-height: 1.5;
+      }
+      fieldset {
+        margin: 2rem 0 0;
+        padding: 16px 20px;
+        border: 1px solid #26262e;
+        border-radius: 8px;
+      }
+      legend { padding: 0 6px; font-size: 0.75rem; color: var(--text-secondary); }
+      .choice { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 0.875rem; }
+      .framed {
+        margin: 2rem 0;
+        padding: 16px 20px;
+        border: 2px solid var(--border-card);
+        border-radius: 10px;
+        background: var(--surface-card);
+        font-size: 1rem;
+        line-height: 1.5;
+      }
+      .missing-face {
+        margin: 0;
+        font-family: 'NoonSans', 'Untitled Sans', system-ui, sans-serif;
+        font-size: 1.125rem;
+        line-height: 1.5;
+      }
+      #theme {
+        margin: 2rem 0 0;
+        padding: 8px 14px;
+        border: 1px solid var(--border-card);
+        border-radius: 6px;
+        background: var(--surface-card);
+        color: var(--text-primary);
+        font: inherit;
+        font-size: 0.875rem;
+        cursor: pointer;
+      }
+      footer { margin-top: 3rem; font-size: 0.8125rem; line-height: 1.5; color: #6b6b73; }
+      .raw { color: #7dd3a0; }
+    </style>
+  </head>
+  <body>
+    <p class="eyebrow">Alt+V toggles the overlay</p>
+    <h1 id="title">The product designers.</h1>
+    <p class="lede">
+      For years, one group of people has quietly laboured behind the scenes,
+      building the landscape of the internet.
+    </p>
+    <p class="lede">The people who sweat the small stuff.</p>
+    <p class="narrative">
+      Devtools splits these across separate panels: font-size in one place,
+      margin in another, and the relationship between them nowhere at all.
+    </p>
+    <p class="narrative raw">
+      This paragraph uses a raw hex colour, so the readout has no token to name
+      and falls back to the value.
+    </p>
+    <div class="row">
+      <div class="card">column-gap 20px</div>
+      <div class="card">1.25rem apart</div>
+      <div class="card">flex wrap</div>
+    </div>
+    <fieldset>
+      <legend>Grid units</legend>
+      <p class="choice"><input type="radio" name="unit" id="rem" checked /><label for="rem">rem</label></p>
+      <p class="choice"><input type="radio" name="unit" id="px" /><label for="px">px</label></p>
+    </fieldset>
+    <div class="framed">
+      <p class="missing-face">
+        16px padding inside a 2px border — the distance a designer measures to
+        the outer edge is 18px. This line asks for NoonSans, which is not here.
+      </p>
+    </div>
+    <button id="theme" type="button">Toggle page theme</button>
+    <footer>vernel demo page — nothing here is styled by the overlay.</footer>
+    <script type="module">
+      import vernel from '../dist/index.js';
+      const instance = vernel({ baseline: 8 });
+      instance.enable();
+      // Handy for poking at from the console.
+      globalThis.vernelInstance = instance;
+
+      document.getElementById('theme').addEventListener('click', () => {
+        const root = document.documentElement;
+        root.dataset.theme = root.dataset.theme === 'light' ? 'dark' : 'light';
+      });
+    </script>
+  </body>
+</html>

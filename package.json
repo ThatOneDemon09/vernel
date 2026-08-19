@@ -1,0 +1,46 @@
+{
+  "name": "vernel",
+  "version": "0.0.1",
+  "description": "Spacing and typography inspection for the web",
+  "keywords": [
+    "typography",
+    "spacing",
+    "css",
+    "design",
+    "devtools"
+  ],
+  "author": "Karthikeyan",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ThatOneDemon09/vernel.git"
+  },
+  "homepage": "https://github.com/ThatOneDemon09/vernel#readme",
+  "bugs": {
+    "url": "https://github.com/ThatOneDemon09/vernel/issues"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "snippet": "node scripts/snippet.mjs",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"no tests yet\" && exit 0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12",
+    "typescript": "^5.9.3"
+  }
+}
