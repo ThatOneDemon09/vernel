@@ -36,7 +36,7 @@ These are non-negotiable. Ask before breaking any of them.
 
 ## Current state
 
-Readers, and a working overlay. `npx tsc --noEmit` is clean.
+Readers, and a working overlay in light and dark. `npx tsc --noEmit` is clean.
 
 Public surface, all of `src/index.ts`:
 
@@ -47,30 +47,42 @@ Public surface, all of `src/index.ts`:
   rowGap, columnGap
 - `readRole(el)` → `string` — the semantic name a designer would use:
   "Headline Block", "Narrative Text", "Radio Input", "Eyebrow Label"
+- `readFont(el)` → `FontResolution` — the declared stack, the family actually
+  rendering, and whether that is a fallback
 - `vernel(options)` → `VernelInstance` — `{ enabled, enable(), disable(),
-  toggle(), destroy() }`, driving the real overlay
+  toggle(), destroy() }`, driving the real overlay. Options: `baseline`,
+  `hotkey`, `root`, `theme`.
 
-The overlay draws margin/padding/content bands, an outline with corner handles,
-a dashed rule on the first text baseline, the baseline grid, blue gap bands to
-the neighbouring siblings, and chip rows anchored to the element: role on the
-left, type metrics on the right, size and spacing below. Chips read in the units
-type is specced in — rem, the unitless leading ratio, em tracking — and name the
-colour's design token when one in scope matches.
+The overlay draws margin/padding/content bands, an outline with corner handles, a
+dashed rule on the first text baseline, the baseline grid, blue gap bands to the
+neighbouring siblings, green padding measure lines with end caps, and chip rows
+anchored to the element: role plus selector on the left, type metrics on the
+right, size and spacing below. Chips read in the units type is specced in — rem,
+the unitless leading ratio, em tracking — and name the colour's design token when
+one in scope matches.
 
-Two decisions worth knowing about, both adjacent to the constraints above:
+Decisions worth knowing about, all adjacent to the constraints above:
 
 - **Tracking is held in 1/1000 em and displayed as em.** `TypeMetrics.tracking`
   keeps the 1/1000 em contract; the chip shows the same number as `-0.02em`.
-- **An off-document canvas answers two questions no computed style will.** Font
-  ascent and descent, needed to place a baseline inside a line box, and the sRGB
-  bytes of a colour, needed to match tokens across colour syntaxes. The canvas
-  is never appended, no stylesheet is parsed, and no inline `style` is read.
+- **An off-document canvas answers three questions no computed style will.** Font
+  ascent and descent, to place a baseline inside a line box; the sRGB bytes of a
+  colour, to match tokens across colour syntaxes and to judge how light the page
+  is; and whether a family is really available, to name the face that is actually
+  rendering rather than the one declared first. The canvas is never appended, no
+  stylesheet is parsed, and no inline `style` is read.
+- **Padding lines carry two numbers.** CSS padding, and what the border adds on
+  top of it — the distance a designer measures in Figma, where the border sits
+  inside the shape.
+- **Chrome follows the page, not the OS.** `theme: 'auto'` reads the first
+  painted background above the hovered element; `prefers-color-scheme` is only
+  the fallback, for pages that leave the canvas to the UA.
 
 ## Next
 
-- Interface design is being reworked from a reference; treat the current chip
+- Interface design is still being reworked from a reference; treat the chip
   visuals as provisional and keep them in the one stylesheet in
-  `src/overlay/host.ts`.
+  `src/overlay/host.ts`, which holds both token sets.
 - Geist Mono is asked for by family name only. Guaranteeing it would mean
   `document.fonts.add(new FontFace(...))` with an embedded subset, since
   `@font-face` does not apply inside a shadow root — needs a call on shipping a
