@@ -21,6 +21,11 @@ export interface BoxModel {
   readonly borders: BoxSides;
 }
 
+/** Keeps a box of `size` inside `limit`, never closer than `edge` to either end. */
+export function clampInto(value: number, size: number, limit: number, edge = 4): number {
+  return Math.max(edge, Math.min(value, limit - size - edge));
+}
+
 function outset(rect: Rect, by: BoxSides): Rect {
   return {
     x: rect.x - by.left,
