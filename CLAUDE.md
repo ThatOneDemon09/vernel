@@ -36,32 +36,47 @@ These are non-negotiable. Ask before breaking any of them.
 
 ## Current state
 
-`src/index.ts` holds the entire public surface. It typechecks and the metric
-readers work today:
+Readers, and a working overlay. `npx tsc --noEmit` is clean.
+
+Public surface, all of `src/index.ts`:
 
 - `readType(el)` → `TypeMetrics` — fontFamily, fontSize, fontWeight, lineHeight,
-  leading (ratio), letterSpacing (px), tracking (1/1000 em)
+  leading (ratio), letterSpacing (px), tracking (1/1000 em). `lineHeight` and
+  `leading` are `null` when the computed value is the keyword `normal`.
 - `readSpacing(el)` → `SpacingMetrics` — margin/padding on all four sides,
   rowGap, columnGap
-- `vernel(options)` → `VernelInstance` — **stub**. Returns an object with the
-  right shape but `enable()`/`disable()`/`toggle()` only flip a boolean.
+- `readRole(el)` → `string` — the semantic name a designer would use:
+  "Headline Block", "Narrative Text", "Radio Input", "Eyebrow Label"
+- `vernel(options)` → `VernelInstance` — `{ enabled, enable(), disable(),
+  toggle(), destroy() }`, driving the real overlay
 
-## What to build next, in order
+The overlay draws margin/padding/content bands, an outline with corner handles,
+a dashed rule on the first text baseline, the baseline grid, blue gap bands to
+the neighbouring siblings, and chip rows anchored to the element: role on the
+left, type metrics on the right, size and spacing below. Chips read in the units
+type is specced in — rem, the unitless leading ratio, em tracking — and name the
+colour's design token when one in scope matches.
 
-1. **Overlay renderer.** Shadow root host, absolutely positioned boxes drawn
-   over the hovered element. Margin band, padding band, content box — three
-   distinct fills, low opacity, no borders that shift perceived size.
-2. **Hover hit testing.** `document.elementFromPoint` on pointermove, throttled
-   to rAF. Ignore the overlay host itself. Handle scroll and resize via
-   `ResizeObserver` and a scroll listener on the capture phase.
-3. **Type readout panel.** Fixed-position card near the cursor showing the
-   `TypeMetrics` for the hovered element. Flip sides when it would overflow the
-   viewport.
-4. **Baseline grid.** When `baseline > 0`, draw horizontal rules at that
-   interval across the root. Show whether the hovered element's baseline sits on
-   or off the grid, and by how many px.
-5. **Hotkey binding.** Bind `options.hotkey` on keydown. Skip when focus is in
-   an input, textarea, or contenteditable. `null` disables.
+Two decisions worth knowing about, both adjacent to the constraints above:
+
+- **Tracking is held in 1/1000 em and displayed as em.** `TypeMetrics.tracking`
+  keeps the 1/1000 em contract; the chip shows the same number as `-0.02em`.
+- **An off-document canvas answers two questions no computed style will.** Font
+  ascent and descent, needed to place a baseline inside a line box, and the sRGB
+  bytes of a colour, needed to match tokens across colour syntaxes. The canvas
+  is never appended, no stylesheet is parsed, and no inline `style` is read.
+
+## Next
+
+- Interface design is being reworked from a reference; treat the current chip
+  visuals as provisional and keep them in the one stylesheet in
+  `src/overlay/host.ts`.
+- Geist Mono is asked for by family name only. Guaranteeing it would mean
+  `document.fonts.add(new FontFace(...))` with an embedded subset, since
+  `@font-face` does not apply inside a shadow root — needs a call on shipping a
+  font file in the package.
+- No test harness in the repo. The overlay is verified by a Playwright script
+  driving the demo page; adding it would mean a Playwright dev dependency.
 
 ## Structure
 

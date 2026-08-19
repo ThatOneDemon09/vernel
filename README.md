@@ -4,8 +4,8 @@ Read spacing and type metrics off any element without opening devtools.
 
 Devtools splits these across separate panels — you check `font-size` in one
 place and `margin` in another, and lose the relationship between them. vernel
-treats spacing and typography as one problem and shows them together, over the
-live page.
+treats spacing and typography as one problem and annotates the live page with
+both at once.
 
 ## Install
 
@@ -22,58 +22,99 @@ const inspector = vernel({ baseline: 8 });
 inspector.enable();
 ```
 
-Hover anything. The overlay draws the element's margin band, padding band and
-content box, and puts a card next to the cursor with its type metrics. `Alt+V`
-toggles it.
+Hover anything. `Alt+V` toggles it.
 
-Or read the metrics directly, with no overlay:
-
-```js
-import { readType, readSpacing } from 'vernel';
-
-readType(document.querySelector('h1'));
-// { fontFamily: 'Inter, sans-serif', fontSize: 40, fontWeight: 700,
-//   lineHeight: 48, leading: 1.2, letterSpacing: -0.8, tracking: -20 }
-
-readSpacing(document.querySelector('.card'));
-// { margin: { top: 24, right: 0, bottom: 24, left: 0 },
-//   padding: { top: 16, right: 20, bottom: 16, left: 20 },
-//   rowGap: 0, columnGap: 0 }
+```
+┌ Headline Block ─────────────────────── Geist 600  Aa 2.6rem  ↕ 1.15  ↔ -0.02em  A text-primary ┐
+│                                                                                                │
+│   The product designers.                                                                       │
+│ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ ─ first baseline ─ ─ ─ │
+└─────────────────────── W 1104px  H 47.8px  M 0 0 32px  ⎯ -3.2px off grid ──────────────────────┘
 ```
 
-`tracking` is in 1/1000 em — the unit type is actually specced in — alongside
-the raw px `letterSpacing`. `lineHeight` and `leading` are `null` when the
-computed line-height is the keyword `normal`.
+The overlay draws, all anchored to the element rather than the cursor:
+
+- **A role chip** naming what the element is — `Headline Block`, `Narrative
+  Text`, `Radio Input`, `Eyebrow Label`, `Layout Block` — inferred from the tag,
+  ARIA role, input type, and, for untagged text, its own size and treatment.
+- **Type chips** in the units type is specced in: `rem` for size, the unitless
+  ratio for leading, `em` for tracking, and the **design-token name** for the
+  colour when one in scope matches.
+- **Size chips** below: border-box width and height, declared margin and
+  padding, `gap`, and how far the first baseline sits off the grid.
+- **Blue gap bands** to the previous and next in-flow sibling, labelled in rem.
+  This is the space a reader actually sees — collapsed margins and `gap`
+  already folded in — not the `margin-bottom` a stylesheet declares. Where a gap
+  band explains a side, the margin band steps aside instead of tinting the same
+  space twice.
+- **Margin, padding and content bands**, each an exact ring, so the two never
+  tint each other where they meet.
+- **A dashed rule on the first text baseline**, and horizontal rules at the
+  baseline interval when `baseline` is set.
+
+## Read the metrics directly
+
+No overlay, no side effects:
+
+```js
+import { readType, readSpacing, readRole } from 'vernel';
+
+readType(document.querySelector('h1'));
+// { fontFamily: 'Geist, system-ui, sans-serif', fontSize: 41.6, fontWeight: 600,
+//   lineHeight: 47.84, leading: 1.15, letterSpacing: -0.832, tracking: -20 }
+
+readSpacing(document.querySelector('.row'));
+// { margin: { top: 32, right: 0, bottom: 32, left: 0 },
+//   padding: { top: 0, right: 0, bottom: 0, left: 0 }, rowGap: 12, columnGap: 20 }
+
+readRole(document.querySelector('input[type=radio]'));
+// 'Radio Input'
+```
+
+`tracking` is in 1/1000 em — the unit type is specced in — alongside the raw px
+`letterSpacing`; the overlay shows the same number as `em`. `lineHeight` and
+`leading` are `null` when the computed line-height is the keyword `normal`.
 
 ## Options
 
-| Option     | Default   | Meaning                                                        |
-| ---------- | --------- | -------------------------------------------------------------- |
-| `baseline` | `0`       | Baseline grid interval in px. `0` draws no grid.                |
-| `hotkey`   | `'Alt+V'` | Toggle binding: `'Mod+Shift+K'`, `'F2'`, … `null` binds nothing. |
-| `root`     | `<html>`  | Element the baseline grid is anchored to.                       |
+| Option     | Default   | Meaning                                                          |
+| ---------- | --------- | ---------------------------------------------------------------- |
+| `baseline` | `0`       | Baseline grid interval in px. `0` draws no grid.                  |
+| `hotkey`   | `'Alt+V'` | Toggle binding: `'Mod+Shift+K'`, `'F2'`, … `null` binds nothing.  |
+| `root`     | `<html>`  | Element the baseline grid and `rem` are measured against.        |
 
 The instance is `{ enabled, enable(), disable(), toggle(), destroy() }`.
 `destroy()` unbinds the hotkey and removes the overlay.
 
-## Baseline grid
+## Design tokens
 
-With `baseline` set, vernel rules the page at that interval and reports how far
-the hovered element's first text baseline sits from the nearest line — `on 8px
-grid`, or `+3.5px off 8px grid`. The reading is only offered for elements that
-own their first line of text; a container whose first line comes from a child
-gets no reading rather than a confidently wrong one.
+Colour chips show a token name — `text-primary` — rather than
+`rgb(244, 244, 245)`, by matching the element's computed colour against the
+custom properties in scope on the root element, read back through
+`getComputedStyle`. No stylesheet is parsed. Values in any colour syntax are
+compared as sRGB bytes, so a token written in `oklch()` still matches a computed
+`rgb()`. Where several names share a colour, the one that reads as a text role
+wins. Engines that do not enumerate custom properties in computed style yield no
+tokens, and the chip falls back to the hex value.
+
+## Typeface
+
+The readout asks for **Geist Mono** and falls back through `ui-monospace`. If
+your page loads Geist Mono, the overlay picks it up; `@font-face` is ignored
+inside a shadow root, and declaring one on the document would be exactly the
+global style injection this overlay refuses.
 
 ## What it does to your page
 
 Nothing. One `<vernel-overlay>` element is appended to `<body>` with a shadow
 root, and every style lives inside it. No global CSS, no classes added to your
-elements, no layout-affecting DOM. All metrics come from `getComputedStyle`, so
-what you read is what is rendered. Zero runtime dependencies, ESM only.
+elements, no layout-affecting DOM. Metrics come from `getComputedStyle`, so what
+you read is what is rendered. Zero runtime dependencies, ESM only.
 
-Font ascent and descent — needed to locate a baseline inside a line box, and
-exposed by no computed style — come from canvas text metrics on an off-document
-canvas.
+Two things no computed style can answer are asked of an off-document canvas,
+which is created but never appended: the font's ascent and descent, needed to
+locate a baseline inside a line box, and the sRGB bytes of a colour, needed to
+compare token values across colour syntaxes.
 
 ## Demo
 
