@@ -116,7 +116,33 @@ which is created but never appended: the font's ascent and descent, needed to
 locate a baseline inside a line box, and the sRGB bytes of a colour, needed to
 compare token values across colour syntaxes.
 
-## Demo
+## Run it on a page you do not control
+
+`vernel.snippet.js` in the repo root is the whole tool bundled into one file for
+pasting into a devtools console. Open the page you want to audit, open the
+console, paste the file, press enter: the overlay switches itself on with an 8px
+grid. `Alt+V` toggles, `vernelInstance.destroy()` removes it. For repeat use,
+keep it in **devtools → Sources → Snippets** and run it with `Ctrl/Cmd+Enter`.
+
+Or skip the copying, on any page whose CSP allows it:
+
+```js
+fetch('https://raw.githubusercontent.com/ThatOneDemon09/vernel/main/vernel.snippet.js')
+  .then((r) => r.text())
+  .then(eval);
+```
+
+The file is committed so it can be used without a toolchain. Regenerate it after
+changing `src/`:
+
+```sh
+npm run snippet
+```
+
+That is the one place a bundler is involved. `npm run build` is still `tsc` only,
+and `dist/` is still unbundled ESM.
+
+## Demo page
 
 ```sh
 npm install

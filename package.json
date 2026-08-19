@@ -34,11 +34,13 @@
   ],
   "scripts": {
     "build": "tsc",
+    "snippet": "node scripts/snippet.mjs",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "npm run build",
     "test": "echo \"no tests yet\" && exit 0"
   },
   "devDependencies": {
+    "esbuild": "^0.25.12",
     "typescript": "^5.9.3"
   }
 }
