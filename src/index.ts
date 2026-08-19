@@ -3,6 +3,7 @@ import { createOverlay, type Overlay } from './overlay/index.js';
 
 export type { BoxSides, SpacingMetrics, TypeMetrics } from './metrics.js';
 export { readSpacing, readType } from './metrics.js';
+export { readRole } from './roles.js';
 
 export interface VernelOptions {
   /** Baseline grid interval in px. 0 — the default — draws no grid. */
