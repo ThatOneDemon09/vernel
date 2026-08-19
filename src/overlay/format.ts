@@ -35,12 +35,6 @@ export function em(tracking: number): string {
   return `${num(tracking / 1000, 3)}em`;
 }
 
-/** First family in a computed font stack, unquoted. */
-export function firstFamily(stack: string): string {
-  const first = stack.split(',')[0]?.trim() ?? '';
-  return first.replace(/^["']|["']$/g, '') || 'unknown';
-}
-
 /** `h1#title.lead` — enough to recognise the element without the full path. */
 export function describe(el: Element): string {
   const tag = el.tagName.toLowerCase();

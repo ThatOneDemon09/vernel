@@ -1,9 +1,13 @@
 import { bindHotkey } from './overlay/hotkey.js';
 import { createOverlay, type Overlay } from './overlay/index.js';
+import type { ThemeSetting } from './theme.js';
 
+export type { FontResolution } from './fonts.js';
+export { readFont } from './fonts.js';
 export type { BoxSides, SpacingMetrics, TypeMetrics } from './metrics.js';
 export { readSpacing, readType } from './metrics.js';
 export { readRole } from './roles.js';
+export type { Theme, ThemeSetting } from './theme.js';
 
 export interface VernelOptions {
   /** Baseline grid interval in px. 0 — the default — draws no grid. */
@@ -12,6 +16,11 @@ export interface VernelOptions {
   readonly hotkey?: string | null;
   /** Element the baseline grid is anchored to. Defaults to `<html>`. */
   readonly root?: Element;
+  /**
+   * Chrome palette. `'auto'` — the default — reads the page's own background and
+   * falls back to `prefers-color-scheme` when nothing is painted.
+   */
+  readonly theme?: ThemeSetting;
 }
 
 export interface VernelInstance {
@@ -41,6 +50,7 @@ export function vernel(options: VernelOptions = {}): VernelInstance {
   const config = {
     baseline: options.baseline ?? 0,
     root: options.root ?? document.documentElement,
+    theme: options.theme ?? 'auto',
   };
   const hotkey = options.hotkey === undefined ? DEFAULT_HOTKEY : options.hotkey;
 

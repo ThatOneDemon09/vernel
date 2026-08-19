@@ -1,12 +1,15 @@
-import type { SpacingMetrics, TypeMetrics } from '../metrics.js';
-import { formatColor } from '../tokens.js';
+import { formatColor } from '../color.js';
+import type { FontResolution } from '../fonts.js';
+import type { BoxSides, SpacingMetrics, TypeMetrics } from '../metrics.js';
 import type { BaselineReading } from './baseline.js';
-import { em, firstFamily, num, px, rem, shorthand, signed } from './format.js';
-import type { Rect } from './geometry.js';
+import { em, num, px, rem, shorthand, signed } from './format.js';
+import { clampInto, type Rect } from './geometry.js';
 import { div } from './host.js';
 
 export interface ReadoutData {
   readonly role: string;
+  /** `h1#title` — the role names it for a designer, this locates it for a dev. */
+  readonly selector: string;
   /** Border box, which is what the size chips report. */
   readonly box: Rect;
   /**
@@ -15,7 +18,10 @@ export interface ReadoutData {
    */
   readonly bounds: { readonly top: number; readonly bottom: number };
   readonly type: TypeMetrics;
+  /** Which family is really drawing the text, which may not be the first asked for. */
+  readonly font: FontResolution;
   readonly spacing: SpacingMetrics;
+  readonly borders: BoxSides;
   /** Computed `color`, and the design token that matches it if there is one. */
   readonly color: string;
   readonly colorToken: string | null;
@@ -28,14 +34,15 @@ export interface Readout {
   hide(): void;
 }
 
-/** Distance from the element's box to a chip row, and from the viewport edge. */
+/** Distance from the element's box to a chip row, and between stacked rows. */
 const BOX_GAP = 8;
-const EDGE_GAP = 4;
 const ROW_GAP = 4;
 
 interface Chip {
   readonly el: HTMLElement;
   readonly icon: HTMLElement;
+  /** Dim trailing text: the thing the number needs, not the number itself. */
+  readonly note: HTMLElement;
   set(value: string | null): void;
 }
 
@@ -44,12 +51,14 @@ function createChip(parent: HTMLElement, icon: string, modifier?: string): Chip 
   const iconEl = div('chip__icon');
   iconEl.textContent = icon;
   const value = div('chip__value');
-  el.append(iconEl, value);
+  const note = div('chip__note');
+  el.append(iconEl, value, note);
   parent.append(el);
 
   return {
     el,
     icon: iconEl,
+    note,
     set(text) {
       el.style.display = text === null ? 'none' : 'flex';
       if (text !== null) value.textContent = text;
@@ -59,10 +68,6 @@ function createChip(parent: HTMLElement, icon: string, modifier?: string): Chip 
 
 function place(group: HTMLElement, left: number, top: number): void {
   group.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
-}
-
-function clamp(value: number, size: number, limit: number): number {
-  return Math.max(EDGE_GAP, Math.min(value, limit - size - EDGE_GAP));
 }
 
 /**
@@ -86,6 +91,7 @@ export function createReadout(shadow: ShadowRoot): Readout {
   const height = createChip(sizeGroup, 'H');
   const margin = createChip(sizeGroup, 'M');
   const padding = createChip(sizeGroup, 'P');
+  const border = createChip(sizeGroup, 'B');
   const gap = createChip(sizeGroup, 'G');
   const baseline = createChip(sizeGroup, '⎯');
 
@@ -94,7 +100,12 @@ export function createReadout(shadow: ShadowRoot): Readout {
       const { type, spacing, box, rootFontSize } = data;
 
       role.set(data.role);
-      family.set(`${firstFamily(type.fontFamily)} ${num(type.fontWeight, 0)}`);
+      role.note.textContent = data.selector;
+      // The rendered family, not the declared one: a stack that asks for a face
+      // it never loaded still reports that face in computed style.
+      family.set(`${data.font.rendered} ${num(type.fontWeight, 0)}`);
+      family.icon.textContent = data.font.fallback ? '↳' : '';
+      family.el.classList.toggle('chip--fallback', data.font.fallback);
       fontSize.set(rem(type.fontSize, rootFontSize));
       leading.set(type.leading === null ? 'normal' : num(type.leading, 2));
       tracking.set(em(type.tracking));
@@ -117,6 +128,12 @@ export function createReadout(shadow: ShadowRoot): Readout {
         spacing.padding.bottom !== 0 ||
         spacing.padding.left !== 0;
       padding.set(hasPadding ? shorthand(spacing.padding) : null);
+      const hasBorder =
+        data.borders.top !== 0 ||
+        data.borders.right !== 0 ||
+        data.borders.bottom !== 0 ||
+        data.borders.left !== 0;
+      border.set(hasBorder ? shorthand(data.borders) : null);
       gap.set(
         spacing.rowGap === 0 && spacing.columnGap === 0
           ? null
@@ -140,18 +157,18 @@ export function createReadout(shadow: ShadowRoot): Readout {
       const typeWidth = typeGroup.offsetWidth;
       const right = box.x + box.width;
 
-      const topRow = clamp(data.bounds.top - rowHeight - BOX_GAP, rowHeight, viewportHeight);
+      const topRow = clampInto(data.bounds.top - rowHeight - BOX_GAP, rowHeight, viewportHeight);
       // On a narrow element the two groups would collide, so the type metrics
       // step up a row instead of overprinting the role.
       const collides = box.x + roleWidth + BOX_GAP > right - typeWidth;
-      const typeRow = collides ? clamp(topRow - rowHeight - ROW_GAP, rowHeight, viewportHeight) : topRow;
+      const typeRow = collides ? clampInto(topRow - rowHeight - ROW_GAP, rowHeight, viewportHeight) : topRow;
 
-      place(roleGroup, clamp(box.x, roleWidth, viewportWidth), topRow);
-      place(typeGroup, clamp(right - typeWidth, typeWidth, viewportWidth), typeRow);
+      place(roleGroup, clampInto(box.x, roleWidth, viewportWidth), topRow);
+      place(typeGroup, clampInto(right - typeWidth, typeWidth, viewportWidth), typeRow);
       place(
         sizeGroup,
-        clamp(box.x + box.width / 2 - sizeGroup.offsetWidth / 2, sizeGroup.offsetWidth, viewportWidth),
-        clamp(data.bounds.bottom + BOX_GAP, sizeGroup.offsetHeight, viewportHeight),
+        clampInto(box.x + box.width / 2 - sizeGroup.offsetWidth / 2, sizeGroup.offsetWidth, viewportWidth),
+        clampInto(data.bounds.bottom + BOX_GAP, sizeGroup.offsetHeight, viewportHeight),
       );
     },
 

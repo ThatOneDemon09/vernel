@@ -31,24 +31,67 @@ const HOST_CSS = [
  */
 const MONO = `'Geist Mono', 'GeistMono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace`;
 
-const STYLE = `
-:host {
-  all: initial;
+/**
+ * Two complete token sets. The overlay is drawn *on* the page, so its chrome has
+ * to sit on whatever ground the page is using — and a site with its own theme
+ * toggle changes that without touching any browser setting.
+ */
+const DARK = `
   --accent: #e2603c;
   --accent-dim: rgba(226, 96, 60, 0.62);
   --chip-bg: rgba(72, 26, 17, 0.94);
   --chip-edge: rgba(226, 96, 60, 0.24);
+  --chip-note: rgba(255, 255, 255, 0.42);
+  --role-ink: #f2a189;
+  --warn: #f0b429;
+  --margin-fill: rgba(246, 173, 85, 0.3);
+  --padding-fill: rgba(104, 211, 145, 0.3);
+  --content-fill: rgba(255, 255, 255, 0.06);
+  --pad-ink: #6fd39b;
+  --pad-chip-bg: rgba(13, 43, 29, 0.94);
+  --pad-chip-edge: rgba(111, 211, 155, 0.28);
   --gap-ink: #85c9ee;
   --gap-fill: rgba(78, 163, 217, 0.18);
   --gap-edge: rgba(133, 201, 238, 0.5);
   --gap-chip-bg: rgba(13, 34, 47, 0.94);
-  --margin-fill: rgba(246, 173, 85, 0.3);
-  --padding-fill: rgba(104, 211, 145, 0.3);
-  --content-fill: rgba(255, 255, 255, 0.06);
+  --gap-chip-edge: rgba(133, 201, 238, 0.28);
   --rule: rgba(236, 72, 153, 0.18);
   --baseline-ink: rgba(236, 72, 153, 0.65);
+  --handle-fill: #17100e;
+`;
+
+const LIGHT = `
+  --accent: #b8431f;
+  --accent-dim: rgba(184, 67, 31, 0.6);
+  --chip-bg: rgba(253, 232, 223, 0.96);
+  --chip-edge: rgba(184, 67, 31, 0.2);
+  --chip-note: rgba(61, 41, 33, 0.5);
+  --role-ink: #8f3315;
+  --warn: #a35a06;
+  --margin-fill: rgba(230, 145, 40, 0.28);
+  --padding-fill: rgba(22, 150, 90, 0.24);
+  --content-fill: rgba(22, 22, 32, 0.05);
+  --pad-ink: #12704a;
+  --pad-chip-bg: rgba(224, 246, 233, 0.96);
+  --pad-chip-edge: rgba(18, 112, 74, 0.22);
+  --gap-ink: #1f6d9e;
+  --gap-fill: rgba(56, 145, 205, 0.16);
+  --gap-edge: rgba(31, 109, 158, 0.42);
+  --gap-chip-bg: rgba(223, 239, 250, 0.96);
+  --gap-chip-edge: rgba(31, 109, 158, 0.24);
+  --rule: rgba(190, 24, 93, 0.08);
+  --baseline-ink: rgba(190, 24, 93, 0.5);
+  --handle-fill: #fffaf7;
+`;
+
+const STYLE = `
+:host {
+  all: initial;
   --mono: ${MONO};
-}
+${DARK}}
+/* Namespaced, so a page that styles [data-theme] itself cannot reach in. */
+:host([data-vernel-theme='light']) {
+${LIGHT}}
 * { box-sizing: border-box; }
 
 .grid {
@@ -57,7 +100,7 @@ const STYLE = `
   display: none;
 }
 
-.gap, .band, .box, .outline, .handle, .baseline-mark, .chips, .chip--gap {
+.gap, .band, .box, .outline, .handle, .baseline-mark, .measure, .chips, .chip--gap, .chip--pad {
   position: absolute;
   top: 0;
   left: 0;
@@ -81,11 +124,25 @@ const STYLE = `
 .handle {
   width: 7px;
   height: 7px;
-  background: #17100e;
+  background: var(--handle-fill);
   border: 1.5px solid var(--accent);
 }
 
 .baseline-mark { border-top: 1px dashed var(--baseline-ink); }
+
+/* A spacing line with end caps, the way a spec sheet draws a distance. */
+.measure { background: var(--pad-ink); }
+.measure::before, .measure::after {
+  content: '';
+  position: absolute;
+  background: var(--pad-ink);
+}
+.measure--y::before, .measure--y::after { left: -3px; width: 7px; height: 1px; }
+.measure--y::before { top: 0; }
+.measure--y::after { bottom: 0; }
+.measure--x::before, .measure--x::after { top: -3px; width: 1px; height: 7px; }
+.measure--x::before { left: 0; }
+.measure--x::after { right: 0; }
 
 .chips {
   gap: 5px;
@@ -108,14 +165,23 @@ const STYLE = `
 }
 .chip__icon { color: var(--accent-dim); }
 .chip__icon:empty { display: none; }
+.chip__note { color: var(--chip-note); }
+.chip__note:empty { display: none; }
 /* The role names the thing, so it reads a step brighter than the numbers. */
-.chip--role { color: #f2a189; }
+.chip--role { color: var(--role-ink); }
 .chip--color .chip__icon { border-bottom: 2px solid currentColor; }
-.chip--off .chip__value { color: #f0b429; }
+.chip--off .chip__value { color: var(--warn); }
+/* The declared face is not the one drawing: say so where the name is shown. */
+.chip--fallback .chip__icon { color: var(--warn); }
 .chip--gap {
   color: var(--gap-ink);
   background: var(--gap-chip-bg);
-  border-color: rgba(133, 201, 238, 0.28);
+  border-color: var(--gap-chip-edge);
+}
+.chip--pad {
+  color: var(--pad-ink);
+  background: var(--pad-chip-bg);
+  border-color: var(--pad-chip-edge);
 }
 `;
 
